@@ -1,0 +1,86 @@
+# filepath: config.yaml
+# Конфигурация генератора изображений цивилизаций Age of Empires II
+
+# Настройки шрифтов
+# Укажите пути к файлам шрифтов (.ttf или .otf).
+# Пути могут быть абсолютными или относительными (относительно корневой папки проекта).
+# Если путь не указан (пустая строка или null), будет использован шрифт по умолчанию (DejaVuSans).
+# Рекомендуется размещать шрифты в папке ./fonts/ вашего проекта.
+# Пример относительного пути: "fonts/MyCustomFont-Regular.ttf"
+font_paths:
+  # Шрифт для основного заголовка (названия цивилизации)
+  title: "fonts/*.ttf" # Пример: путь к вариативному шрифту
+  # Шрифт для заголовков секций (уникальные юниты, технологии)
+  section_title: "fonts/*.ttf" # Может быть тот же, что и title
+  # Обычный шрифт для описаний, бонусов
+  normal: "fonts/*.ttf"
+  # Жирный шрифт (если используется отдельный файл для жирного начертания)
+  # Если у вас вариативный шрифт, можно указать тот же файл, что и для normal,
+  # а жирность будет достигаться программно или настройками вариативного шрифта (Pillow это пока не очень поддерживает).
+  # Если у вас отдельный файл типа MyFont-Bold.ttf, укажите его здесь.
+  # Для простоты можно использовать тот же файл, что и для normal, если он поддерживает жирность
+  # или если жирность не критична и будет имитироваться.
+  bold: "fonts/*.ttf" # Может быть тот же, если шрифт вариативный или если жирность не нужна как отдельный файл
+
+# Настройки изображения
+image:
+  width: 400
+  height: 800
+  background_color: "#F5DEB3"
+  background_opacity: 0.6
+  background_image: ""
+  use_heraldry_background: false
+  heraldry_opacity: 0.2
+  border:
+    enabled: true
+    width: 2
+    color: "#8B4513"
+    radius: 10
+
+# Настройки текста
+text:
+  title:
+    # font_family: больше не используется для выбора файла, см. font_paths выше
+    font_size: 28
+    font_weight: "bold" # Pillow может пытаться имитировать bold, если отдельный жирный шрифт не загружен
+    color: "#8B4513"
+    align: "center"
+  description:
+    font_size: 12
+    color: "#000000"
+    line_height: 1.2
+  bonus:
+    font_size: 12
+    color: "#000000"
+    line_height: 1.2
+  section_title:
+    font_size: 14
+    font_weight: "bold"
+    color: "#8B4513"
+  team_bonus:
+    font_size: 12
+    font_weight: "bold"
+    color: "#000000"
+
+# Настройки иконок
+icons:
+  bonus_icon_size: 20
+  civ_icon_size: 50
+  unit_icon_size: 28
+  tech_icon_size: 28
+  icon_text_spacing: 8
+  opacity: 1.0
+
+# Настройки макета
+layout:
+  padding: 15
+  section_spacing: 10
+  item_spacing: 5
+  civ_icon_position: "top-right"
+  text_compactness: 0.9
+
+# Настройки вывода
+output:
+  format: "png"
+  jpg_quality: 90
+  output_path: "ru/{civ_name}/{civ_name}.{format}"

@@ -1,0 +1,190 @@
+/* AOE2 Civilization Image Generator CSS Styles */
+
+/* Base container */
+.civ-container {
+  font-family: Cinzel, 'Times New Roman', serif;
+  background-color: rgba(245, 222, 179, 0.6); /* Wheat color with 60% opacity */
+  border: 2px solid #8B4513; /* SaddleBrown */
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Civilization header */
+.civ-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #8B4513;
+  padding-bottom: 8px;
+}
+
+/* Civilization title */
+.civ-title {
+  font-family: UnifrakturMaguntia, 'Blackletter', serif;
+  font-size: 32px;
+  font-weight: bold;
+  color: #8B4513;
+  margin: 0;
+  flex-grow: 1;
+  text-align: center;
+}
+
+/* Civilization icon */
+.civ-icon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+/* Civilization type */
+.civ-type {
+  font-size: 18px;
+  font-style: italic;
+  color: #5D4037;
+  margin: 0 0 12px 0;
+}
+
+/* Bonuses section */
+.civ-bonuses {
+  margin-bottom: 12px;
+}
+
+.bonus-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+
+.bonus-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.bonus-text {
+  font-size: 16px;
+  color: #000000;
+}
+
+/* Section titles */
+.section-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #8B4513;
+  margin: 12px 0 6px 0;
+  border-bottom: 1px solid #D7CCC8;
+  padding-bottom: 4px;
+}
+
+/* Unique units section */
+.unique-units {
+  margin-bottom: 12px;
+}
+
+.unit-item {
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.unit-icon {
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.unit-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #000000;
+}
+
+.unit-type {
+  font-size: 14px;
+  color: #5D4037;
+  font-style: italic;
+  margin-left: 5px;
+}
+
+/* Unique technologies section */
+.unique-techs {
+  margin-bottom: 12px;
+}
+
+.tech-item {
+  margin-bottom: 6px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.tech-icon {
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.tech-content {
+  flex-grow: 1;
+}
+
+.tech-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #000000;
+  display: block;
+}
+
+.tech-description {
+  font-size: 14px;
+  color: #5D4037;
+  display: block;
+}
+
+/* Team bonus section */
+.team-bonus {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #D7CCC8;
+}
+
+.team-bonus-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #8B4513;
+  margin: 0 0 4px 0;
+}
+
+.team-bonus-text {
+  font-size: 16px;
+  color: #000000;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .civ-container {
+    padding: 15px;
+  }
+  
+  .civ-title {
+    font-size: 24px;
+  }
+  
+  .civ-icon {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .bonus-icon, .unit-icon, .tech-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+  }
+}
