@@ -66,7 +66,6 @@ def load_civ_data(civ_name: str) -> dict:
 
 def clean_text_for_display(text: str) -> str:
     if not text: return ""
-    # Remove (<cost>) or (‹cost›) placeholders, case-insensitive, allowing spaces
     cleaned_text = re.sub(r'\(\s*(?:<cost>|‹cost›)\s*\)', '', text, flags=re.IGNORECASE)
     return cleaned_text.strip()
 
@@ -74,26 +73,73 @@ def get_text_size(text: str, font: ImageFont.FreeTypeFont) -> tuple[int, int]:
     if not hasattr(font, 'getbbox'):
         print(f"WARNING: get_text_size вызван с некорректным объектом шрифта для текста: '{text[:20]}...'")
         return (len(text) * 8, 12)
-    bbox = font.getbbox(text)
+    bbox = font.getbbox(text) 
     return bbox[2] - bbox[0], bbox[3] - bbox[1]
 
-def draw_wrapped_text(
+def get_text_actual_height(text: str, font: ImageFont.FreeTypeFont) -> int:
+    if not hasattr(font, 'getmask'): return 12
+    bbox = font.getbbox(text)
+    return bbox[3] - bbox[1]
+
+def draw_wrapped_text_and_get_actual_width(
         draw: ImageDraw.Draw, text: str, x: int, y: int,
         font: ImageFont.FreeTypeFont, fill: tuple[int, int, int],
-        max_chars: int, line_height: int, compactness: float = 1.0
-) -> int:
-    if not text: return y
+        max_render_width: int, line_height: int, compactness: float = 1.0
+) -> tuple[int, int, int]: # Возвращает (y_after_text, total_text_block_height, max_line_actual_width)
+    if not text: return y, 0, 0
+    
     current_y = y
+    total_height_drawn = 0
+    max_line_width_px = 0
+    
     paragraphs = text.split('\n')
     for para_idx, para in enumerate(paragraphs):
         if not para.strip():
-            if para_idx < len(paragraphs) - 1: current_y += int(line_height * compactness)
+            if para_idx < len(paragraphs) - 1:
+                actual_line_h = int(line_height * compactness)
+                current_y += actual_line_h
+                total_height_drawn += actual_line_h
             continue
-        lines = textwrap.wrap(para, width=max_chars, drop_whitespace=True, replace_whitespace=True)
-        for line in lines:
-            draw.text((x, current_y), line, font=font, fill=fill)
-            current_y += int(line_height * compactness)
-    return current_y
+
+        lines = []
+        current_line_text = ""
+        words = para.split(' ')
+        for word_idx, word in enumerate(words):
+            test_line_text = current_line_text + (" " if current_line_text else "") + word
+            try:
+                current_line_width_px = font.getlength(test_line_text)
+            except AttributeError: 
+                current_line_width_px, _ = get_text_size(test_line_text, font)
+
+            if current_line_width_px <= max_render_width:
+                current_line_text = test_line_text
+            else:
+                if current_line_text: 
+                    lines.append(current_line_text)
+                current_line_text = word 
+                if word_idx == 0 : # If the very first word is already too long
+                    pass # It will be added as is below
+        if current_line_text:
+            lines.append(current_line_text)
+        
+        if not lines and para: 
+            lines.append(para)
+
+        for line_text in lines:
+            draw.text((x, current_y), line_text, font=font, fill=fill)
+            try:
+                actual_w = font.getlength(line_text)
+            except AttributeError:
+                actual_w, _ = get_text_size(line_text, font)
+            if actual_w > max_line_width_px:
+                max_line_width_px = actual_w
+
+            actual_line_h = int(line_height * compactness)
+            current_y += actual_line_h
+            total_height_drawn += actual_line_h
+            
+    return current_y, total_height_drawn, int(max_line_width_px)
+
 
 def _apply_background_image_or_heraldry(base_canvas: Image.Image, bg_source_img: Image.Image, config: dict, is_heraldry: bool):
     width, height = base_canvas.size
@@ -136,6 +182,7 @@ def draw_civilization(
     padding, section_spacing = layout_cfg.get('padding', 15), layout_cfg.get('section_spacing', 10)
     item_spacing, text_compactness = layout_cfg.get('item_spacing', 5), layout_cfg.get('text_compactness', 0.9)
     icon_text_spacing = icons_cfg.get('icon_text_spacing', 8)
+    section_header_bottom_margin = layout_cfg.get('section_header_bottom_margin', 5)
 
     content_canvas = Image.new("RGBA", (img_width, 3000), (0,0,0,0))
     draw = ImageDraw.Draw(content_canvas)
@@ -164,8 +211,7 @@ def draw_civilization(
             elif civ_icon_pos_config == 'top-center':
                 icon_paste_x, icon_paste_y = (img_width - civ_icon_size) // 2, current_y
                 y_after_civ_icon_block = current_y + civ_icon_size + int(section_spacing * text_compactness)
-            else: icon_paste_x, icon_paste_y = 0,0 # Should not happen if config is valid
-            
+            else: icon_paste_x, icon_paste_y = 0,0 
             if not (img_height_fixed > 0 and icon_paste_y + civ_icon_size > img_height_fixed - padding):
                 content_canvas.paste(civ_icon_img, (icon_paste_x, icon_paste_y), civ_icon_img)
                 max_content_y = max(max_content_y, icon_paste_y + civ_icon_size)
@@ -178,11 +224,11 @@ def draw_civilization(
     if desc_text:
         desc_color = ImageColor.getrgb(desc_style.get('color', "#000000"))
         desc_font_size_val = desc_style.get('font_size', 12)
-        desc_max_chars = (img_width - 2 * padding) // (desc_font_size_val // 2 + 1)
+        desc_max_text_width = img_width - 2 * padding
         desc_line_height = int(desc_font_size_val * desc_style.get('line_height', 1.2))
         if not (img_height_fixed > 0 and current_y + desc_line_height > img_height_fixed - padding):
-            current_y = draw_wrapped_text(draw, desc_text, current_x, current_y, normal_font, desc_color, desc_max_chars, desc_line_height, text_compactness)
-            current_y += int(section_spacing * text_compactness)
+            y_after_desc_text, _, _ = draw_wrapped_text_and_get_actual_width(draw, desc_text, current_x, current_y, normal_font, desc_color, desc_max_text_width, desc_line_height, text_compactness)
+            current_y = y_after_desc_text + int(section_spacing * text_compactness)
     max_content_y = max(max_content_y, current_y)
 
     sections_data_spec = [
@@ -196,14 +242,13 @@ def draw_civilization(
 
     for section_idx, (sec_title_text, data_key, icon_sz, item_style) in enumerate(sections_data_spec):
         items_list = civ_data.get(data_key, [])
-        if data_key == 'team_bonus' and isinstance(items_list, str):
-            items_list = [{"text": items_list}] if items_list else []
+        if data_key == 'team_bonus' and isinstance(items_list, str): items_list = [{"text": items_list}] if items_list else []
         if not items_list: continue
 
         _, sec_title_h = get_text_size(sec_title_text, section_font)
         if img_height_fixed > 0 and current_y + sec_title_h > img_height_fixed - padding: break
         draw.text((current_x, current_y), sec_title_text, font=section_font, fill=section_title_color)
-        current_y += sec_title_h + int(item_spacing * text_compactness)
+        current_y += sec_title_h + int(item_spacing * text_compactness) + int(section_header_bottom_margin * text_compactness)
         max_content_y = max(max_content_y, current_y)
 
         item_font_sz_val = item_style.get('font_size', 12)
@@ -211,49 +256,94 @@ def draw_civilization(
         item_text_col_val = ImageColor.getrgb(item_style.get('color', "#000000"))
 
         for item_data_dict in items_list:
-            item_name_clean = clean_text_for_display(item_data_dict.get('name', item_data_dict.get('text', '')))
+            is_bonus_section = (sec_title_text == "Бонусы:")
             
-            item_desc_for_display_raw = item_data_dict.get('description', '') # This is already processed by extract_data for unique_techs
-            item_desc_for_display_cleaned = clean_text_for_display(item_desc_for_display_raw) # Final clean for (<cost>) or (‹cost›)
+            item_name_raw = item_data_dict.get('name', item_data_dict.get('text', ''))
+            item_name_clean = clean_text_for_display(item_name_raw)
+            if is_bonus_section and item_name_clean: item_name_clean = f"• {item_name_clean}"
 
-            # Enclose unique tech descriptions in parentheses
+            item_desc_for_display_cleaned = clean_text_for_display(item_data_dict.get('description', ''))
             item_desc_content_final = ""
             if sec_title_text == "Уникальные технологии:" and item_desc_for_display_cleaned:
                 item_desc_content_final = f"({item_desc_for_display_cleaned})"
-            elif item_desc_for_display_cleaned: # For other sections, if description exists
-                 item_desc_content_final = item_desc_for_display_cleaned
-
+            elif item_desc_for_display_cleaned: item_desc_content_final = item_desc_for_display_cleaned
 
             item_icon_path = item_data_dict.get('icon')
-            item_start_y, item_text_x, item_actual_icon_h = current_y, current_x, 0
-
-            if item_icon_path and icon_sz > 0 and (item_icon_abs := BASEDIR / item_icon_path).exists():
-                try:
-                    item_img = Image.open(item_icon_abs).convert("RGBA").resize((icon_sz, icon_sz), Image.LANCZOS)
-                    if not (img_height_fixed > 0 and item_start_y + icon_sz > img_height_fixed - padding):
-                        content_canvas.paste(item_img, (current_x, item_start_y), item_img)
-                        item_text_x, item_actual_icon_h = current_x + icon_sz + icon_text_spacing, icon_sz
-                except Exception as e: print(f"ERROR [{civ_name}]: Иконка элем. '{item_icon_abs}': {e}")
+            item_start_y = current_y
             
             item_font_to_use = bold_font if sec_title_text == "Уникальные технологии:" and item_name_clean else normal_font
-            item_max_chars_val = (img_width - item_text_x - padding) // (item_font_sz_val // 2 + 1)
-            y_after_name = item_start_y
+            
+            # --- Отрисовка элемента ---
+            text_x_coord = current_x
+            icon_x_coord = current_x 
+            max_text_render_width = img_width - 2 * padding # Максимальная ширина для текста по умолчанию
+            
+            if not is_bonus_section and item_icon_path and icon_sz > 0: # Иконка слева для УЮ, УТ
+                text_x_coord = current_x + icon_sz + icon_text_spacing
+                max_text_render_width = img_width - text_x_coord - padding
+            elif is_bonus_section and item_icon_path and icon_sz > 0: # Иконка справа для бонуса
+                max_text_render_width = img_width - 2 * padding - icon_sz - icon_text_spacing
+
+            y_after_name, name_block_h, name_actual_w = 0, 0, 0
             if item_name_clean:
                 if not (img_height_fixed > 0 and item_start_y + item_line_h_val > img_height_fixed - padding):
-                    y_after_name = draw_wrapped_text(draw, item_name_clean, item_text_x, item_start_y, item_font_to_use, item_text_col_val, item_max_chars_val, item_line_h_val, text_compactness)
+                    y_after_name, name_block_h, name_actual_w = draw_wrapped_text_and_get_actual_width(
+                        draw, item_name_clean, text_x_coord, item_start_y, 
+                        item_font_to_use, item_text_col_val, 
+                        max_text_render_width, item_line_h_val, text_compactness
+                    )
                 else: item_desc_content_final = "" 
             
-            y_after_desc = y_after_name
+            y_after_desc, desc_block_h = y_after_name, 0
             if item_desc_content_final:
                 desc_style_for_item = text_styles_cfg.get('description', {})
                 desc_font_sz_val_item = desc_style_for_item.get('font_size', 12)
                 desc_line_h_val_item = int(desc_font_sz_val_item * desc_style_for_item.get('line_height', 1.2))
-                desc_max_chars_val_item = (img_width - item_text_x - padding) // (desc_font_sz_val_item // 2 + 1)
-                y_for_item_desc = y_after_name + int(3 * text_compactness) if item_name_clean else item_start_y
+                y_for_item_desc = y_after_name + int(3 * text_compactness) if item_name_clean and name_block_h > 0 else item_start_y
+                
+                # Описание для УТ рисуется под именем, со сдвигом если есть иконка УТ
+                desc_x_for_ut = text_x_coord if sec_title_text == "Уникальные технологии:" else current_x
+                max_desc_render_width = max_text_render_width if sec_title_text == "Уникальные технологии:" else (img_width - 2* padding)
+
                 if not (img_height_fixed > 0 and y_for_item_desc + desc_line_h_val_item > img_height_fixed - padding):
-                    y_after_desc = draw_wrapped_text(draw, item_desc_content_final, item_text_x, y_for_item_desc, normal_font, item_text_col_val, desc_max_chars_val_item, desc_line_h_val_item, text_compactness)
+                    y_after_desc, desc_block_h, _ = draw_wrapped_text_and_get_actual_width(
+                        draw, item_desc_content_final, desc_x_for_ut, y_for_item_desc, 
+                        normal_font, item_text_col_val, max_desc_render_width, 
+                        desc_line_h_val_item, text_compactness
+                    )
             
-            current_y = item_start_y + max(item_actual_icon_h, y_after_desc - item_start_y) + int(item_spacing * text_compactness)
+            total_text_block_actual_height = (y_after_desc - item_start_y)
+            
+            # Размещение иконки
+            item_actual_icon_h_on_canvas = 0
+            if item_icon_path and icon_sz > 0 and (item_icon_abs := BASEDIR / item_icon_path).exists():
+                try:
+                    item_img = Image.open(item_icon_abs).convert("RGBA").resize((icon_sz, icon_sz), Image.LANCZOS)
+                    icon_y_coord = item_start_y # По умолчанию
+                    
+                    if is_bonus_section: # Иконка бонуса справа от текста
+                        # name_actual_w это ширина самого длинного ряда в блоке имени
+                        icon_x_coord = text_x_coord + name_actual_w + icon_text_spacing 
+                        if icon_x_coord + icon_sz > img_width - padding: # Если не помещается, переносим на новую строку
+                             icon_x_coord = text_x_coord # или current_x
+                             y_after_name = y_after_name + int(item_spacing * text_compactness) # небольшой отступ вниз
+                             icon_y_coord = y_after_name # y_after_name уже содержит высоту блока имени
+                             total_text_block_actual_height = (y_after_name + icon_sz) - item_start_y # Обновляем общую высоту
+                        else: # Выравниваем по вертикали с первой строкой имени
+                            _, single_line_name_h = get_text_size("Test",item_font_to_use)
+                            icon_y_coord = item_start_y + (name_block_h if name_block_h < single_line_name_h * 1.5 else single_line_name_h - icon_sz ) //2 # Примерное выравнивание
+
+                    else: # Иконка слева (УЮ, УТ)
+                        icon_x_coord = current_x
+                        icon_y_coord = item_start_y + (total_text_block_actual_height - icon_sz) // 2
+                        icon_y_coord = max(item_start_y, icon_y_coord)
+
+                    if not (img_height_fixed > 0 and icon_y_coord + icon_sz > img_height_fixed - padding):
+                        content_canvas.paste(item_img, (icon_x_coord, icon_y_coord), item_img)
+                        item_actual_icon_h_on_canvas = icon_sz
+                except Exception as e: print(f"ERROR [{civ_name}]: Иконка элем. '{item_icon_abs}': {e}")
+
+            current_y = item_start_y + max(item_actual_icon_h_on_canvas, total_text_block_actual_height) + int(item_spacing * text_compactness)
             max_content_y = max(max_content_y, current_y)
             if img_height_fixed > 0 and current_y > img_height_fixed - padding: break
         
@@ -274,7 +364,7 @@ def draw_civilization(
         content_canvas_cropped = content_canvas.crop((0, 0, img_width, final_img_height))
     else:
         final_img_height = final_content_height - (item_spacing * text_compactness if final_content_height > padding else 0) + padding
-        final_img_height = max(final_img_height, padding * 2 + 50) # Ensure min height
+        final_img_height = max(final_img_height, padding * 2 + 50)
         content_canvas_cropped = content_canvas.crop((0, 0, img_width, final_img_height))
 
     bg_color_tuple = ImageColor.getrgb(image_cfg.get('background_color', "#FFFFFF"))
@@ -286,12 +376,9 @@ def draw_civilization(
         try: bg_source_img_obj = Image.open(bg_image_abs_path).convert("RGBA")
         except Exception as e: print(f"ERROR [{civ_name}]: Фон '{bg_image_abs_path}': {e}")
     if not bg_source_img_obj and image_cfg.get('use_heraldry_background', False) and civ_icon_rel_path and (civ_heraldry_abs_path := BASEDIR / civ_icon_rel_path).exists():
-        try:
-            bg_source_img_obj = Image.open(civ_heraldry_abs_path).convert("RGBA")
-            is_heraldry_bg = True
+        try: bg_source_img_obj = Image.open(civ_heraldry_abs_path).convert("RGBA"); is_heraldry_bg = True
         except Exception as e: print(f"ERROR [{civ_name}]: Герб для фона '{civ_heraldry_abs_path}': {e}")
-    if bg_source_img_obj:
-        _apply_background_image_or_heraldry(final_image, bg_source_img_obj, config, is_heraldry_bg)
+    if bg_source_img_obj: _apply_background_image_or_heraldry(final_image, bg_source_img_obj, config, is_heraldry_bg)
     
     final_image.alpha_composite(content_canvas_cropped, (0, 0))
 
@@ -322,15 +409,11 @@ def generate_all_images():
     print("--- Начало генерации всех изображений ---")
     config = load_config_file()
     try: fonts_tuple = load_all_fonts_from_config(config)
-    except Exception as e:
-        print(f"CRITICAL ERROR: Не удалось загрузить шрифты: {e}. Генерация прервана.")
-        return
+    except Exception as e: print(f"CRITICAL ERROR: Не удалось загрузить шрифты: {e}. Генерация прервана."); return
 
     generated_count, failed_count = 0, 0
     civ_names_list = load_all_civ_names()
-    if not civ_names_list:
-        print("WARNING: Список цивилизаций пуст. Проверьте extract_data.py и ./data/")
-        return
+    if not civ_names_list: print("WARNING: Список цивилизаций пуст."); return
     print(f"INFO: Найдено {len(civ_names_list)} цивилизаций для обработки.")
 
     for civ_name_key in civ_names_list:
@@ -339,10 +422,7 @@ def generate_all_images():
             if draw_civilization(civ_name_key, config, fonts_tuple): generated_count += 1
             else: failed_count += 1
         except Exception as e:
-            failed_count += 1
-            print(f"CRITICAL ERROR при генерации для '{civ_name_key}': {e}")
-            import traceback
-            traceback.print_exc()
+            failed_count += 1; print(f"CRITICAL ERROR для '{civ_name_key}': {e}"); import traceback; traceback.print_exc()
 
     print("\n--- Генерация всех изображений завершена ---")
     print(f"Успешно сгенерировано: {generated_count} изображений.")
