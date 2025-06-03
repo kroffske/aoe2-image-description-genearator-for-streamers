@@ -9,7 +9,7 @@ extract: install_deps
 	python extract_data.py
 
 check_config:
-	if ! [[ -e "config.yaml" ]]; then cp config.example.yaml config.yaml; fi
+	if ! [ -e "config.yaml" ]; then cp config.example.yaml config.yaml; fi
 
 generate: check_config extract
 	python generate_images.py
