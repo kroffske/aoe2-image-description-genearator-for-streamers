@@ -15,7 +15,6 @@ ru/
 icons/
 images/
 fonts/
-aoe2techtree/
 aoe2_civ_image_generator.py
 config.yaml
 .idea/
