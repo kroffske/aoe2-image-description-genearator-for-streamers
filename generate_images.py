@@ -320,7 +320,7 @@ def draw_civilization(
                 try:
                     item_img = Image.open(item_icon_abs).convert("RGBA").resize((icon_sz, icon_sz), Image.LANCZOS)
                     icon_y_coord = item_start_y # По умолчанию
-                    
+
                     if is_bonus_section: # Иконка бонуса справа от текста
                         # name_actual_w это ширина самого длинного ряда в блоке имени
                         icon_x_coord = text_x_coord + name_actual_w + icon_text_spacing 
@@ -346,7 +346,7 @@ def draw_civilization(
             current_y = item_start_y + max(item_actual_icon_h_on_canvas, total_text_block_actual_height) + int(item_spacing * text_compactness)
             max_content_y = max(max_content_y, current_y)
             if img_height_fixed > 0 and current_y > img_height_fixed - padding: break
-        
+
         if img_height_fixed > 0 and current_y > img_height_fixed - padding: break
         current_y = max_content_y
         if section_idx < len(sections_data_spec) - 1:
@@ -370,7 +370,7 @@ def draw_civilization(
     bg_color_tuple = ImageColor.getrgb(image_cfg.get('background_color', "#FFFFFF"))
     bg_alpha = int(255 * image_cfg.get('background_opacity', 1.0))
     final_image = Image.new("RGBA", (img_width, final_img_height), (*bg_color_tuple, bg_alpha))
-    
+
     bg_source_img_obj, is_heraldry_bg = None, False
     if (bg_image_path_str := image_cfg.get('background_image', "").strip()) and (bg_image_abs_path := BASEDIR / bg_image_path_str).exists():
         try: bg_source_img_obj = Image.open(bg_image_abs_path).convert("RGBA")
@@ -379,15 +379,15 @@ def draw_civilization(
         try: bg_source_img_obj = Image.open(civ_heraldry_abs_path).convert("RGBA"); is_heraldry_bg = True
         except Exception as e: print(f"ERROR [{civ_name}]: Герб для фона '{civ_heraldry_abs_path}': {e}")
     if bg_source_img_obj: _apply_background_image_or_heraldry(final_image, bg_source_img_obj, config, is_heraldry_bg)
-    
+
     final_image.alpha_composite(content_canvas_cropped, (0, 0))
 
     if (border_cfg := image_cfg.get('border', {})).get('enabled', False):
         border_w, border_r = border_cfg.get('width', 2), border_cfg.get('radius', 0)
         border_col = ImageColor.getrgb(border_cfg.get('color', "#000000"))
         border_draw = ImageDraw.Draw(final_image)
-        if border_r > 0: border_draw.rounded_rectangle([(0,0), (img_width-1, final_img_height-1)], radius=border_r, outline=border_col, width=border_w)
-        else: border_draw.rectangle([(0,0), (img_width-1, final_img_height-1)], outline=border_col, width=border_w)
+        if border_r > 0: border_draw.rounded_rectangle([(0, 0), (img_width-1, final_img_height-1)], radius=border_r, outline=border_col, width=border_w)
+        else: border_draw.rectangle([(0, 0), (img_width-1, final_img_height-1)], outline=border_col, width=border_w)
 
     output_format = output_cfg.get('format', 'png').lower()
     output_rel_path = output_cfg.get('output_path', 'ru/{civ_name}/{civ_name}.{format}').format(civ_name=civ_name, format=output_format)
@@ -404,6 +404,7 @@ def draw_civilization(
     except Exception as e:
         print(f"ERROR [{civ_name}]: Сохранение '{final_output_abs_path}': {e}")
         return None
+
 
 def generate_all_images():
     print("--- Начало генерации всех изображений ---")
@@ -426,7 +427,9 @@ def generate_all_images():
 
     print("\n--- Генерация всех изображений завершена ---")
     print(f"Успешно сгенерировано: {generated_count} изображений.")
-    if failed_count > 0: print(f"Не удалось сгенерировать: {failed_count} изображений.")
+    if failed_count > 0:
+        print(f"Не удалось сгенерировать: {failed_count} изображений.")
+
 
 if __name__ == "__main__":
     generate_all_images()

@@ -1,7 +1,6 @@
 # filepath: extract_data.py
 # !/usr/bin/env python3
 
-import os
 import json
 import shutil
 import re
@@ -151,33 +150,40 @@ KEYWORD_TO_ICON_PATH_MAP = {
     "замковую эпоху": "icons/ages/castle_age_de.png",
     "имперскую эпоху": "icons/ages/imperial_age_de.png", "имперскую": "icons/ages/imperial_age_de.png",
     "эпохи": "icons/ages/feudal_age_de.png", "эпоху": "icons/ages/feudal_age_de.png",
-}
+    }
 
 
 def load_json_file(file_path):
     print(f"Attempting to load JSON from: {file_path}")
-    if not file_path.exists(): raise FileNotFoundError(f"JSON file not found: {file_path}")
-    with open(file_path, 'r', encoding='utf-8') as f: return json.load(f)
+    if not file_path.exists():
+        raise FileNotFoundError(f"JSON file not found: {file_path}")
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 
 def save_json_file(data, file_path):
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(file_path, 'w', encoding='utf-8') as f: json.dump(data, f, ensure_ascii=False, indent=2)
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
     print(f"Saved JSON to: {file_path}")
 
 
 def copy_icon(source_path: Path, dest_path: Path) -> bool:
-    if not dest_path.parent.exists(): dest_path.parent.mkdir(parents=True, exist_ok=True)
-    if not source_path.exists(): return False
+    if not dest_path.parent.exists():
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+    if not source_path.exists():
+        return False
     try:
-        shutil.copy2(str(source_path), str(dest_path));
+        shutil.copy2(str(source_path), str(dest_path))
         return True
     except Exception as e:
-        print(f"    ERROR copying icon {source_path} to {dest_path}: {e}"); return False
+        print(f"    ERROR copying icon {source_path} to {dest_path}: {e}")
+        return False
 
 
 def clean_html_and_convert_br_to_newline(html_text: str) -> str:
-    if not html_text: return ""
+    if not html_text:
+        return ""
     text_with_newlines = re.sub(r'<br\s*/?>', '\n', html_text, flags=re.IGNORECASE)
     soup = BeautifulSoup(text_with_newlines, 'html.parser')
     return soup.get_text()
@@ -193,10 +199,14 @@ def classify_bonus(rus_text: str) -> str:
     unit_specific_keywords = ['копейщики', 'мечники', 'арбалетчики', 'рыцари', 'верблюды', 'слоны', 'требушеты',
                               'скауты']
     tech_specific_keywords = ['технологии', 'улучшения', 'исследования', 'кузница', 'университет', 'монастырь', 'эпоха']
-    if any(kw in txt for kw in unit_specific_keywords): return 'unit_specific'
-    if any(kw in txt for kw in military_keywords): return 'military'
-    if any(kw in txt for kw in economic_keywords): return 'economic'
-    if any(kw in txt for kw in tech_specific_keywords): return 'tech_specific'
+    if any(kw in txt for kw in unit_specific_keywords):
+        return 'unit_specific'
+    if any(kw in txt for kw in military_keywords):
+        return 'military'
+    if any(kw in txt for kw in economic_keywords):
+        return 'economic'
+    if any(kw in txt for kw in tech_specific_keywords):
+        return 'tech_specific'
     return 'other'
 
 
@@ -204,7 +214,8 @@ def find_icon_for_bonus(bonus_text: str) -> str | None:
     bonus_text_lower = bonus_text.lower()
     sorted_keywords = sorted(KEYWORD_TO_ICON_PATH_MAP.keys(), key=len, reverse=True)
     for keyword in sorted_keywords:
-        if keyword.lower() in bonus_text_lower: return KEYWORD_TO_ICON_PATH_MAP[keyword]
+        if keyword.lower() in bonus_text_lower:
+            return KEYWORD_TO_ICON_PATH_MAP[keyword]
     return None
 
 
@@ -219,7 +230,7 @@ def parse_description_and_bonuses(full_description_text: str) -> tuple[str, list
         "Уникальный юнит:", "Уникальные юниты:",
         "Уникальные технологии:", "Командный бонус:", "Класс:",
         "Особенности цивилизации:"
-    ]
+        ]
 
     for line in lines:
         stripped_line = line.strip()
@@ -228,7 +239,8 @@ def parse_description_and_bonuses(full_description_text: str) -> tuple[str, list
         if parsing_main_desc:
             if stripped_line.startswith(potential_bonus_marker) or is_section_ender:
                 parsing_main_desc = False
-                if is_section_ender and not stripped_line.startswith(potential_bonus_marker): break
+                if is_section_ender and not stripped_line.startswith(potential_bonus_marker):
+                    break
             if parsing_main_desc:
                 if stripped_line:
                     main_description_lines.append(line)
@@ -291,7 +303,8 @@ def extract_civilization_data():
         full_data = load_json_file(DATA_JSON_PATH)
         ru_strings = load_json_file(RU_STRINGS_PATH)
     except FileNotFoundError:
-        print("CRITICAL ERROR: Essential data files not found."); return {}
+        print("CRITICAL ERROR: Essential data files not found.")
+        return {}
 
     civ_helptexts_map = full_data.get('civ_helptexts', {})
     civ_names_map = full_data.get('civ_names', {})
@@ -317,14 +330,15 @@ def extract_civilization_data():
 
         unique_items_dict = civ_specific_data_from_techtree.get('unique', {})
         unit_ids_to_process = []
-        if unique_items_dict.get('castleAgeUniqueUnit'): unit_ids_to_process.append(
-            str(unique_items_dict['castleAgeUniqueUnit']))
-        if unique_items_dict.get('imperialAgeUniqueUnit'): unit_ids_to_process.append(
-            str(unique_items_dict['imperialAgeUniqueUnit']))
+        if unique_items_dict.get('castleAgeUniqueUnit'):
+            unit_ids_to_process.append(str(unique_items_dict['castleAgeUniqueUnit']))
+        if unique_items_dict.get('imperialAgeUniqueUnit'):
+            unit_ids_to_process.append(str(unique_items_dict['imperialAgeUniqueUnit']))
         processed_unique_units = []
         for unit_id_str in unit_ids_to_process:  # Эти иконки уже должны быть скопированы copy_all_from_subdir
             unit_info = full_data.get('data', {}).get('units', {}).get(unit_id_str)
-            if not unit_info: continue
+            if not unit_info:
+                continue
             unit_name_ru = ru_strings.get(str(unit_info.get('LanguageNameId')), f"Unit_{unit_id_str}")
             # Путь теперь просто ссылается на локально скопированную иконку
             icon_path_rel_unit = str((UNIT_ICONS_OUT_DIR / f"{unit_id_str}.png").relative_to(BASEDIR)).replace("\\",
@@ -333,20 +347,24 @@ def extract_civilization_data():
                 {'id': unit_id_str, 'name': unit_name_ru, 'type': "", 'icon': icon_path_rel_unit})
 
         tech_ids_to_process_map = {}
-        if (ut_id := unique_items_dict.get('castleAgeUniqueTech')): tech_ids_to_process_map[str(ut_id)] = "castle"
-        if (ut_id := unique_items_dict.get('imperialAgeUniqueTech')): tech_ids_to_process_map[str(ut_id)] = "imperial"
+        if (ut_id := unique_items_dict.get('castleAgeUniqueTech')):
+            tech_ids_to_process_map[str(ut_id)] = "castle"
+        if (ut_id := unique_items_dict.get('imperialAgeUniqueTech')):
+            tech_ids_to_process_map[str(ut_id)] = "imperial"
         processed_unique_techs = []
         for tech_id_str, age_role in tech_ids_to_process_map.items():  # Иконки УТ также уже скопированы
             tech_info = full_data.get('data', {}).get('techs', {}).get(tech_id_str)
-            if not tech_info: continue
+            if not tech_info:
+                continue
             tech_name_ru = ru_strings.get(str(tech_info.get('LanguageNameId')), f"Tech_{tech_id_str}")
             tech_desc_ru_plain_original = clean_html_and_convert_br_to_newline(
                 ru_strings.get(str(tech_info.get('LanguageHelpId')), ""))
             description_to_display = tech_desc_ru_plain_original
             lines = tech_desc_ru_plain_original.split('\n')
             if lines and re.fullmatch(r"Изучить\s+.+?\s*\(\s*‹cost›\s*\)", lines[0].strip(), re.IGNORECASE):
-                remaining_lines = lines[1:];
-                while remaining_lines and not remaining_lines[0].strip(): remaining_lines.pop(0)
+                remaining_lines = lines[1:]
+                while remaining_lines and not remaining_lines[0].strip():
+                    remaining_lines.pop(0)
                 description_to_display = '\n'.join(remaining_lines).strip()
 
             # Уникальные технологии имеют специфичные имена файлов для иконок в aoe2techtree
@@ -355,8 +373,8 @@ def extract_civilization_data():
             icon_path_rel_tech = None
             if copy_icon(ICONS_SOURCE_DIR / "Techs" / unique_tech_icon_filename,
                          TECH_ICONS_OUT_DIR / f"{tech_id_str}.png"):
-                icon_path_rel_tech = str((TECH_ICONS_OUT_DIR / f"{tech_id_str}.png").relative_to(BASEDIR)).replace("\\",
-                                                                                                                   "/")
+                icon_path_rel_tech = str(
+                    (TECH_ICONS_OUT_DIR / f"{tech_id_str}.png").relative_to(BASEDIR)).replace("\\", "/")
 
             processed_unique_techs.append(
                 {'id': tech_id_str, 'name': tech_name_ru, 'raw_description': tech_desc_ru_plain_original,
@@ -369,8 +387,8 @@ def extract_civilization_data():
             team_bonus_text_plain = clean_html_and_convert_br_to_newline(team_bonus_text_html)
             if team_bonus_text_plain:  # Только если текст не пустой
                 team_bonus_icon = find_icon_for_bonus(team_bonus_text_plain)
-                if team_bonus_icon: print(
-                    f"    Found icon '{team_bonus_icon}' for TEAM bonus: '{team_bonus_text_plain[:50]}...'")
+                if team_bonus_icon:
+                    print(f"    Found icon '{team_bonus_icon}' for TEAM bonus: '{team_bonus_text_plain[:50]}...'")
                 team_bonus_for_json.append({"text": team_bonus_text_plain, "icon": team_bonus_icon,
                                             "classification": classify_bonus(team_bonus_text_plain)})
 
@@ -392,7 +410,7 @@ def extract_civilization_data():
             'unique_techs': processed_unique_techs,
             'team_bonus': team_bonus_for_json,
             'icon': civ_icon_rel_path
-        }
+            }
         save_json_file(civ_output_json, DATA_OUT_DIR / f"{civ_name_ru}.json")
         all_civs_output_data[civ_name_ru] = civ_output_json
         print(f"--- Finished processing {civ_key_id} ({civ_name_ru}) ---")
