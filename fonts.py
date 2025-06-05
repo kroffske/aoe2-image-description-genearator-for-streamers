@@ -19,12 +19,13 @@ from PIL import ImageFont
 # Это используется для разрешения относительных путей из config.yaml
 BASEDIR_FONTS_PY = Path(__file__).resolve().parent
 
+
 def load_font_from_config(
-    font_path_str: str | None,
-    font_size: int,
-    font_role: str,
-    default_font_name: str = "DejaVuSans.ttf" # Используется, если путь не указан или файл не найден
-) -> ImageFont.FreeTypeFont:
+        font_path_str: str | None,
+        font_size: int,
+        font_role: str,
+        default_font_name: str = "DejaVuSans.ttf"  # Используется, если путь не указан или файл не найден
+        ) -> ImageFont.FreeTypeFont:
     """
     Загружает шрифт по указанному пути и размеру.
     Если путь не указан или файл не найден, пытается загрузить системный шрифт DejaVuSans.ttf.
@@ -56,13 +57,13 @@ def load_font_from_config(
                 print(f"INFO: {font_role}: Шрифт успешно загружен {loaded_from} (размер: {font_size}).")
             except Exception as e:
                 print(f"WARNING: {font_role}: Не удалось загрузить шрифт из файла '{font_file}': {e}. Попытка загрузить шрифт по умолчанию.")
-                font_to_load = None # Сброс, чтобы перейти к загрузке по умолчанию
+                font_to_load = None  # Сброс, чтобы перейти к загрузке по умолчанию
         else:
             print(f"WARNING: {font_role}: Файл шрифта не найден по пути '{font_file}'. Попытка загрузить шрифт по умолчанию.")
-            font_to_load = None # Сброс
+            font_to_load = None  # Сброс
     else:
         print(f"INFO: {font_role}: Путь к шрифту не указан в конфигурации. Попытка загрузить шрифт по умолчанию.")
-        font_to_load = None # Сброс
+        font_to_load = None  # Сброс
 
     # Если не удалось загрузить указанный шрифт, пытаемся загрузить шрифт по умолчанию
     if font_to_load is None:
@@ -77,14 +78,13 @@ def load_font_from_config(
             # Чтобы этого избежать, можно было бы вызвать здесь исключение, но для большей устойчивости оставим так.
             # Для генерации изображений это будет означать использование очень простого шрифта.
             try:
-                font_to_load = ImageFont.load_default() # Самый крайний случай
+                font_to_load = ImageFont.load_default()  # Самый крайний случай
                 print(f"WARNING: {font_role}: Загружен самый базовый шрифт по умолчанию от Pillow.")
             except Exception as e_default:
-                 print(f"CRITICAL: {font_role}: Не удалось загрузить даже базовый шрифт Pillow: {e_default}. Генерация текста невозможна.")
-                 raise # Перевыброс критической ошибки
+                print(f"CRITICAL: {font_role}: Не удалось загрузить даже базовый шрифт Pillow: {e_default}. Генерация текста невозможна.")
+                raise  # Перевыброс критической ошибки
 
-
-    if font_to_load is None: # Если даже load_default не сработал (маловероятно, но для полноты)
+    if font_to_load is None:  # Если даже load_default не сработал (маловероятно, но для полноты)
         raise IOError(f"CRITICAL: {font_role}: Не удалось загрузить ни один шрифт. Проверьте конфигурацию и доступность шрифтов.")
 
     return font_to_load
