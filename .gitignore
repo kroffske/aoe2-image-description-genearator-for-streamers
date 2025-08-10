@@ -13,8 +13,9 @@ logs/
 data/
 ru/
 icons/
-images/
+stream_images/
 fonts/
 aoe2_civ_image_generator.py
 config.yaml
 .idea/
+.claude

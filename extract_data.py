@@ -22,7 +22,7 @@ BUILDING_ICONS_OUT_DIR = ICONS_OUT_DIR / "buildings"  # Новая переме�
 TECH_ICONS_OUT_DIR = ICONS_OUT_DIR / "techs"
 RESOURCE_ICONS_OUT_DIR = ICONS_OUT_DIR / "resources"
 AGES_ICONS_OUT_DIR = ICONS_OUT_DIR / "ages"  # Новая переменная
-CIV_ICON_OUT_DIR_BASE = BASEDIR / "ru"
+CIV_ICON_OUT_DIR_BASE = BASEDIR / "stream_images" / "icons"
 
 KEYWORD_TO_ICON_PATH_MAP = {
     # Здания (сначала более специфичные)
@@ -219,11 +219,13 @@ def find_icon_for_bonus(bonus_text: str) -> str | None:
     return None
 
 
-def parse_description_and_bonuses(full_description_text: str) -> tuple[str, list[dict]]:
+def parse_description_and_bonuses(full_description_text: str) -> tuple[str, list[dict], str]:
     lines = full_description_text.split('\n')
     main_description_lines = []
     bonuses_list = []
+    team_bonus_text = ""
     parsing_main_desc = True
+    parsing_team_bonus = False
     potential_bonus_marker = "•"
 
     section_after_main_desc_keywords = [
@@ -232,32 +234,55 @@ def parse_description_and_bonuses(full_description_text: str) -> tuple[str, list
         "Особенности цивилизации:"
         ]
 
-    for line in lines:
+    for i, line in enumerate(lines):
         stripped_line = line.strip()
+        
+        # Check if we're starting the team bonus section
+        if stripped_line.startswith("Командный бонус:"):
+            parsing_main_desc = False
+            parsing_team_bonus = True
+            # Extract text after "Командный бонус:" on the same line
+            team_bonus_on_same_line = stripped_line[len("Командный бонус:"):].strip()
+            if team_bonus_on_same_line:
+                team_bonus_text = team_bonus_on_same_line
+                parsing_team_bonus = False
+            continue
+        
+        # If we're parsing team bonus, get the next non-empty line
+        if parsing_team_bonus:
+            if stripped_line and not any(stripped_line.startswith(kw) for kw in section_after_main_desc_keywords):
+                team_bonus_text = stripped_line
+                parsing_team_bonus = False
+            elif any(stripped_line.startswith(kw) for kw in section_after_main_desc_keywords):
+                parsing_team_bonus = False
+            continue
+        
         is_section_ender = any(stripped_line.startswith(kw) for kw in section_after_main_desc_keywords)
 
         if parsing_main_desc:
             if stripped_line.startswith(potential_bonus_marker) or is_section_ender:
                 parsing_main_desc = False
                 if is_section_ender and not stripped_line.startswith(potential_bonus_marker):
-                    break
+                    continue
             if parsing_main_desc:
                 if stripped_line:
                     main_description_lines.append(line)
                 elif main_description_lines and main_description_lines[-1].strip():
                     main_description_lines.append("")
                 continue
+        
         if stripped_line.startswith(potential_bonus_marker):
             bonus_text = stripped_line.lstrip(potential_bonus_marker).strip()
             if bonus_text:
                 icon_path = find_icon_for_bonus(bonus_text)
                 classification = classify_bonus(bonus_text)
                 bonuses_list.append({"text": bonus_text, "icon": icon_path, "classification": classification})
-        elif is_section_ender:
-            break
+        elif is_section_ender and not stripped_line.startswith("Командный бонус:"):
+            continue
+            
     final_main_description = "\n".join(main_description_lines).strip()
     final_main_description = re.sub(r'\n(\s*\n)+', '\n\n', final_main_description)
-    return final_main_description, bonuses_list
+    return final_main_description, bonuses_list, team_bonus_text
 
 
 def copy_all_from_subdir(source_subdir_name: str, dest_dir: Path):
@@ -279,8 +304,7 @@ def copy_all_from_subdir(source_subdir_name: str, dest_dir: Path):
 def extract_civilization_data():
     # Создаем основные директории вывода
     for folder in [DATA_OUT_DIR, ICONS_OUT_DIR, UNIT_ICONS_OUT_DIR, BUILDING_ICONS_OUT_DIR,
-                   TECH_ICONS_OUT_DIR, RESOURCE_ICONS_OUT_DIR, AGES_ICONS_OUT_DIR,
-                   CIV_ICON_OUT_DIR_BASE]:
+                   TECH_ICONS_OUT_DIR, RESOURCE_ICONS_OUT_DIR, AGES_ICONS_OUT_DIR, CIV_ICON_OUT_DIR_BASE]:
         folder.mkdir(parents=True, exist_ok=True)
 
     # Копирование всех релевантных иконок
@@ -317,13 +341,13 @@ def extract_civilization_data():
         civ_name_loc_id = civ_names_map.get(civ_key_id)
         civ_name_ru = ru_strings.get(civ_name_loc_id, civ_key_id)
 
-        civ_specific_asset_dir = CIV_ICON_OUT_DIR_BASE / civ_name_ru
-        civ_specific_asset_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure the icons directory exists
+        CIV_ICON_OUT_DIR_BASE.mkdir(parents=True, exist_ok=True)
 
         helptext_loc_id = civ_helptexts_map.get(civ_key_id)
         full_civ_help_text_html = ru_strings.get(helptext_loc_id, "")
         full_civ_help_text_plain = clean_html_and_convert_br_to_newline(full_civ_help_text_html)
-        parsed_main_description, parsed_bonuses_list = parse_description_and_bonuses(full_civ_help_text_plain)
+        parsed_main_description, parsed_bonuses_list, team_bonus_text = parse_description_and_bonuses(full_civ_help_text_plain)
 
         print(f"  Parsed main description: '{parsed_main_description[:100]}...'")
         print(f"  Parsed {len(parsed_bonuses_list)} bonuses from description text.")
@@ -340,11 +364,31 @@ def extract_civilization_data():
             if not unit_info:
                 continue
             unit_name_ru = ru_strings.get(str(unit_info.get('LanguageNameId')), f"Unit_{unit_id_str}")
+            
+            # Get and clean the unit description
+            unit_help_id = str(unit_info.get('LanguageHelpId', ''))
+            unit_description_html = ru_strings.get(unit_help_id, "")
+            unit_description_plain = clean_html_and_convert_br_to_newline(unit_description_html)
+            
+            # Extract only the main descriptive paragraph (similar to unique techs)
+            description_to_display = ""
+            lines = unit_description_plain.split('\n')
+            if len(lines) > 1:
+                # Skip first line ("Создать...") and find the actual description
+                for i in range(1, len(lines)):
+                    line = lines[i].strip()
+                    if line and not line.startswith('Улучшения:') and '‹DEFAULT›' not in line and '‹hp›' not in line:
+                        description_to_display = line
+                        break
+            
+            unit_description_clean = description_to_display
+            
             # Путь теперь просто ссылается на локально скопированную иконку
             icon_path_rel_unit = str((UNIT_ICONS_OUT_DIR / f"{unit_id_str}.png").relative_to(BASEDIR)).replace("\\",
                                                                                                                "/")
             processed_unique_units.append(
-                {'id': unit_id_str, 'name': unit_name_ru, 'type': "", 'icon': icon_path_rel_unit})
+                {'id': unit_id_str, 'name': unit_name_ru, 'type': "", 'icon': icon_path_rel_unit, 
+                 'description': unit_description_clean})
 
         tech_ids_to_process_map = {}
         if (ut_id := unique_items_dict.get('castleAgeUniqueTech')):
@@ -380,24 +424,21 @@ def extract_civilization_data():
                 {'id': tech_id_str, 'name': tech_name_ru, 'raw_description': tech_desc_ru_plain_original,
                  'description': description_to_display, 'icon': icon_path_rel_tech})
 
-        team_bonus_loc_id_from_techtree = civ_specific_data_from_techtree.get('team_bonus')
-        team_bonus_for_json = []  # Инициализируем как пустой список
-        if team_bonus_loc_id_from_techtree:
-            team_bonus_text_html = ru_strings.get(team_bonus_loc_id_from_techtree, "")
-            team_bonus_text_plain = clean_html_and_convert_br_to_newline(team_bonus_text_html)
-            if team_bonus_text_plain:  # Только если текст не пустой
-                team_bonus_icon = find_icon_for_bonus(team_bonus_text_plain)
-                if team_bonus_icon:
-                    print(f"    Found icon '{team_bonus_icon}' for TEAM bonus: '{team_bonus_text_plain[:50]}...'")
-                team_bonus_for_json.append({"text": team_bonus_text_plain, "icon": team_bonus_icon,
-                                            "classification": classify_bonus(team_bonus_text_plain)})
+        # Process team bonus from parsed help text
+        team_bonus_for_json = []
+        if team_bonus_text:  # Use the team bonus extracted from help text
+            team_bonus_icon = find_icon_for_bonus(team_bonus_text)
+            if team_bonus_icon:
+                print(f"    Found icon '{team_bonus_icon}' for TEAM bonus: '{team_bonus_text[:50]}...'")
+            team_bonus_for_json.append({"text": team_bonus_text, "icon": team_bonus_icon,
+                                        "classification": classify_bonus(team_bonus_text)})
 
         civ_type_from_techtree_data = civ_specific_data_from_techtree.get('type', "")
         civ_type_display = civ_type_from_techtree_data
 
         civ_icon_filename_base = re.sub(r'[^a-z0-9]', '', civ_key_id.lower())
         civ_heraldry_icon_src = ICONS_SOURCE_DIR / "Civs" / f"{civ_icon_filename_base}.png"
-        civ_heraldry_icon_dest = civ_specific_asset_dir / f"{civ_name_ru}_icon.png"
+        civ_heraldry_icon_dest = CIV_ICON_OUT_DIR_BASE / f"{civ_name_ru}.png"
         civ_icon_rel_path = None
         if copy_icon(civ_heraldry_icon_src, civ_heraldry_icon_dest):  # Копируем герб цивилизации
             civ_icon_rel_path = str(civ_heraldry_icon_dest.relative_to(BASEDIR)).replace("\\", "/")

@@ -64,7 +64,12 @@ text:
 
 # Настройки иконок
 icons:
+  # Включить/выключить отображение иконок для бонусов
+  show_bonus_icons: true
+  # Включить/выключить отображение иконок для командных бонусов
+  show_team_bonus_icons: true
   bonus_icon_size: 20
+  team_bonus_icon_size: 20
   civ_icon_size: 50
   unit_icon_size: 28
   tech_icon_size: 28
@@ -76,6 +81,7 @@ layout:
   padding: 15
   section_spacing: 10
   item_spacing: 5
+  section_header_bottom_margin: 5 # Дополнительный отступ после текста заголовка секции
   civ_icon_position: "top-right"
   text_compactness: 0.9
 
@@ -83,4 +89,4 @@ layout:
 output:
   format: "png"
   jpg_quality: 90
-  output_path: "ru/{civ_name}/{civ_name}.{format}"
+  output_path: "stream_images/ru/{civ_name}.{format}"

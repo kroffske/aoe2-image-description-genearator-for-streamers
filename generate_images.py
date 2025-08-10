@@ -250,11 +250,15 @@ def draw_civilization(
             current_y = y_after_desc_text + int(section_spacing * text_compactness)
     max_content_y = max(max_content_y, current_y)
 
+    # Определяем размеры иконок с учетом настроек включения/выключения
+    bonus_icon_size = icons_cfg.get('bonus_icon_size', 20) if icons_cfg.get('show_bonus_icons', True) else 0
+    team_bonus_icon_size = icons_cfg.get('team_bonus_icon_size', 20) if icons_cfg.get('show_team_bonus_icons', True) else 0
+    
     sections_data_spec = [
-        ("Бонусы:", 'bonuses', icons_cfg.get('bonus_icon_size', 20), text_styles_cfg.get('bonus', {})),
+        ("Бонусы:", 'bonuses', bonus_icon_size, text_styles_cfg.get('bonus', {})),
         ("Уникальные юниты:", 'unique_units', icons_cfg.get('unit_icon_size', 28), text_styles_cfg.get('bonus', {})),
         ("Уникальные технологии:", 'unique_techs', icons_cfg.get('tech_icon_size', 28), text_styles_cfg.get('bonus', {})),
-        ("Командный бонус:", 'team_bonus', 0, text_styles_cfg.get('team_bonus', {}))
+        ("Командный бонус:", 'team_bonus', team_bonus_icon_size, text_styles_cfg.get('team_bonus', {}))
         ]
     section_title_style = text_styles_cfg.get('section_title', {})
     section_title_color = ImageColor.getrgb(section_title_style.get('color', "#000000"))
@@ -289,13 +293,15 @@ def draw_civilization(
             item_desc_content_final = ""
             if sec_title_text == "Уникальные технологии:" and item_desc_for_display_cleaned:
                 item_desc_content_final = f"({item_desc_for_display_cleaned})"
+            elif sec_title_text == "Уникальные юниты:" and item_desc_for_display_cleaned:
+                item_desc_content_final = f"({item_desc_for_display_cleaned})"
             elif item_desc_for_display_cleaned:
                 item_desc_content_final = item_desc_for_display_cleaned
 
             item_icon_path = item_data_dict.get('icon')
             item_start_y = current_y
 
-            item_font_to_use = bold_font if sec_title_text == "Уникальные технологии:" and item_name_clean else normal_font
+            item_font_to_use = bold_font if (sec_title_text in ["Уникальные технологии:", "Уникальные юниты:"] and item_name_clean) else normal_font
 
             # --- Отрисовка элемента ---
             text_x_coord = current_x
@@ -326,9 +332,9 @@ def draw_civilization(
                 desc_line_h_val_item = int(desc_font_sz_val_item * desc_style_for_item.get('line_height', 1.2))
                 y_for_item_desc = y_after_name + int(3 * text_compactness) if item_name_clean and name_block_h > 0 else item_start_y
 
-                # Описание для УТ рисуется под именем, со сдвигом если есть иконка УТ
-                desc_x_for_ut = text_x_coord if sec_title_text == "Уникальные технологии:" else current_x
-                max_desc_render_width = max_text_render_width if sec_title_text == "Уникальные технологии:" else (img_width - 2 * padding)
+                # Описание для УТ и УЮ рисуется под именем, со сдвигом если есть иконка
+                desc_x_for_ut = text_x_coord if sec_title_text in ["Уникальные технологии:", "Уникальные юниты:"] else current_x
+                max_desc_render_width = max_text_render_width if sec_title_text in ["Уникальные технологии:", "Уникальные юниты:"] else (img_width - 2 * padding)
 
                 if not (img_height_fixed > 0 and y_for_item_desc + desc_line_h_val_item > img_height_fixed - padding):
                     y_after_desc, desc_block_h, _ = draw_wrapped_text_and_get_actual_width(
