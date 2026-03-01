@@ -1,6 +1,6 @@
 **Генератор изображений цивилизаций Age of Empires II**
 
-Проект генерирует информационные изображения для всех цивилизаций AOE II на основе данных из [aoe2techtree](https://github.com/SiegeEngineers/aoe2techtree) с русской локализацией.
+Проект генерирует информационные изображения для всех цивилизаций AOE II на основе данных из [aoe2techtree](https://github.com/SiegeEngineers/aoe2techtree) с локализацией (RU/EN).
 
 ---
 
@@ -9,83 +9,109 @@
 * Генерация изображений для всех цивилизаций.
 * Настраиваемый внешний вид через `config.yaml` (размеры, цвета, шрифты, отступы, пути вывода).
 * Актуальные данные и иконки из `aoe2techtree`.
-* Поддержка русской локализации.
+* Поддержка локалей `ru` и `en` (через `--locale`).
+* Команды и параметры CLI: `docs/commands/README.md`.
 
 ## Требования
 
-* Python 3.7+
-* Библиотеки: `Pillow`, `PyYAML`, `beautifulsoup4`
-* Локальный клон репозитория `aoe2techtree` (см. шаг 1).
+* Python 3.10+
+* `uv` (менеджер зависимостей/окружений)
+* Зависимости (ставятся через `uv`): `Pillow`, `PyYAML`, `beautifulsoup4`
+* Данные `aoe2techtree/` (в репозитории как git submodule; см. шаг 2).
 * Файлы шрифтов (папка `fonts/`; пути в `config.yaml`).
 
 ---
 
 ## Быстрый старт
 
-1. **Клонируйте этот репозиторий и `aoe2techtree`:**
+> Основной интерфейс проекта — CLI `aoe2civgen` (команды: `init-config`, `extract`, `generate`, `all`).
+
+1. **Установите `uv` (официальный one-liner):**
+
+   macOS / Linux:
+
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+   Windows (PowerShell):
+
+   ```powershell
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   ```
+
+2. **Клонируйте репозиторий вместе с submodule `aoe2techtree/`:**
 
    ```bash
    git clone https://github.com/kroffske/aoe2-image-description-genearator-for-streamers.git Age2CivImageGeneratorForStreamers
    cd Age2CivImageGeneratorForStreamers
-   git clone https://github.com/SiegeEngineers/aoe2techtree.git
+   git submodule update --init --recursive
    ```
 
-   > Убедитесь, что папка `aoe2techtree` находится внутри папки проекта или измените `REPO_DIR` в `extract_data.py`.
+   > Альтернатива: `git clone --recurse-submodules ...` (если вы ещё не клонировали репозиторий).
 
-2. **Установите зависимости:**
+3. **Установите зависимости через `uv`:**
 
    ```bash
-   python -m venv .venv           # создаём виртуальное окружение
-   # Linux/macOS:
-   source .venv/bin/activate
-   # Windows (PowerShell):
-   .\.venv\Scripts\Activate.ps1
-   pip install Pillow PyYAML beautifulsoup4
+   uv sync
    ```
 
-3. **Подготовьте шрифты:**
+4. **Подготовьте шрифты и конфиг:**
 
    * Скачайте подходящие шрифты (например, [Google Fonts](https://fonts.google.com/)).
    * Поместите файлы шрифтов в папку `fonts/`.
-   * В `config.example.yaml` укажите пути к шрифтам в разделе `font_paths`, затем переименуйте его в `config.yaml`.
+   * Создайте `config.yaml` из шаблона и укажите пути к шрифтам в `font_paths`:
 
-4. **Запустите скрипты по порядку:**
+     ```bash
+     uv run aoe2civgen init-config
+     ```
 
-   1. **Извлечение данных:**
+5. **Запустите генерацию:**
 
-      ```bash
-      python extract_data.py
-      ```
+   Вариант A (рекомендуется для разработки — использует зависимости из проекта):
 
-      * Данные из `aoe2techtree` обрабатываются, локализуются на русский и сохраняются в `data/`.
-      * Иконки копируются в папки `icons/` и `ru/`.
-   2. **(Опционально) Настройте `config.yaml`:**
+   ```bash
+   uv run aoe2civgen all
+   ```
 
-      * Отредактируйте размеры, цвета, шрифты, отступы и пути вывода.
-      * **Управление иконками:** 
-        * `show_bonus_icons` (true/false) — показывать иконки для бонусов
-        * `show_team_bonus_icons` (true/false) — показывать иконки для командных бонусов
-   3. **Генерация изображений:**
+   Или по шагам:
 
-      ```bash
-      python generate_images.py
-      ```
+   ```bash
+   uv run aoe2civgen extract
+   uv run aoe2civgen generate
+   ```
 
-      * Используются данные из `data/` и настройки из `config.yaml`.
-      * По умолчанию итоговые PNG сохраняются в `ru/{civ_name}/{civ_name}.png`.
-      * **Примечание:** скрипт также создаёт англоязычные файлы — их можно удалить вручную.
+   Вариант B (быстрый запуск как “tool” из текущего репозитория — удобно для разового прогона/CI):
+
+   ```bash
+   uvx --from . aoe2civgen all
+   ```
+
+   > Примечания:
+   > * Данные из `aoe2techtree/` локализуются и сохраняются в `data/` (для `--locale ru`) или `data/<locale>/` (например `data/en/`).
+   > * Иконки копируются в `icons/`, гербы цивилизаций — в `stream_images/icons/`.
+   > * Итоговые PNG управляются через `output.output_path` (рекомендуется `stream_images/{locale}/{civ_name}.{format}`).
+   > * Управление иконками: `show_bonus_icons` / `show_team_bonus_icons` в `config.yaml`.
+   > * Тонкая настройка “spacing knobs” (padding/gaps/line spacing): `docs/commands/README.md`.
+
+---
+
+## Документация
+
+* Технический документ: `docs/TECHNICAL_SOLUTION.md`.
+* Команды CLI + новые параметры верстки: `docs/commands/README.md`.
 
 ---
 
 ## Структура проекта
 
 * `config.yaml` — настройки внешнего вида (размеры, цвета, шрифты, пути).
-* `extract_data.py` — извлечение, обработка и локализация данных.
-* `generate_images.py` — создание изображений на основе данных и настроек.
-* `fonts.py` — утилита для загрузки шрифтов.
-* `data/` — JSON-файлы с данными цивилизаций (после `extract_data.py`).
-* `icons/` — иконки юнитов и технологий (после `extract_data.py`).
-* `ru/` — иконки гербов и сгенерированные изображения.
+* `src/aoe2civgen/` — пакет и CLI `aoe2civgen` (извлечение данных + генерация изображений).
+* `aoe2techtree/` — submodule с данными и иконками игры (upstream).
+* `data/` — JSON-файлы с данными цивилизаций (после `aoe2civgen extract`).
+* `icons/` — иконки юнитов/техов/зданий/ресурсов/эпох (после `aoe2civgen extract`).
+* `stream_images/icons/` — гербы цивилизаций (после `aoe2civgen extract`).
+* `stream_images/ru/` — итоговые изображения (после `aoe2civgen generate`).
 * `fonts/` — ваши файлы шрифтов.
 
 ---

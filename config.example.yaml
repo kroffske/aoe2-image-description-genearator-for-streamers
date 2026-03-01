@@ -84,9 +84,14 @@ layout:
   section_header_bottom_margin: 5 # Дополнительный отступ после текста заголовка секции
   civ_icon_position: "top-right"
   text_compactness: 0.9
+  renderer: "site"
+  title_offset_y: -6
+  civ_icon_padding: 15
+  bullet_extra_spacing_px: 4
+  uu_description_gap_px: 2
 
 # Настройки вывода
 output:
   format: "png"
   jpg_quality: 90
-  output_path: "stream_images/ru/{civ_name}.{format}"
+  output_path: "stream_images/{locale}/{civ_name}.{format}"

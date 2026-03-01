@@ -1,15 +1,21 @@
+UV ?= uv
+
 all: generate
 
 install_deps:
-	python -m venv .venv
-	$(source .venv/bin/activate)
-	python -m pip install -r requirements.txt
-	
-extract: install_deps
-	python extract_data.py
+	$(UV) sync
 
-check_config:
-	if ! [ -e "config.yaml" ]; then cp config.example.yaml config.yaml; fi
+extract: install_deps
+	$(UV) run aoe2civgen extract
+
+extract_en: install_deps
+	$(UV) run aoe2civgen extract --locale en
+
+check_config: install_deps
+	$(UV) run aoe2civgen init-config
 
 generate: check_config extract
-	python generate_images.py
+	$(UV) run aoe2civgen generate
+
+generate_en: check_config extract_en
+	$(UV) run aoe2civgen generate --locale en

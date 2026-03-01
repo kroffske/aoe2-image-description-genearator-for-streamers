@@ -10,12 +10,17 @@ out.md
 out/
 bats/
 logs/
+.tasks/
+
+# Generated artifacts (keep out of git)
 data/
 ru/
-icons/
 stream_images/
+
+# Local-only assets
 fonts/
 aoe2_civ_image_generator.py
-config.yaml
 .idea/
 .claude
+
+# NOTE: `config.yaml` and `icons/` are intentionally tracked (explicitly requested).

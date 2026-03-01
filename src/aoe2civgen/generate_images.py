@@ -6,13 +6,21 @@ import re
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 
-from fonts import load_font_from_config
+from aoe2civgen.fonts import load_font_from_config
+from aoe2civgen.paths import find_repo_root
 
-BASEDIR = Path(__file__).resolve().parent
+try:
+    from aoe2civgen.site_layout import render_civ_image as _render_civ_image_site  # type: ignore
+except Exception:  # pragma: no cover
+    _render_civ_image_site = None
+
+BASEDIR = find_repo_root()
 
 
-def load_config_file() -> dict:
-    cfg_path = BASEDIR / "config.yaml"
+def load_config_file(config_path: str | Path | None = None) -> dict:
+    cfg_path = Path(config_path) if config_path else (BASEDIR / "config.yaml")
+    if not cfg_path.is_absolute():
+        cfg_path = BASEDIR / cfg_path
     print(f"INFO: Загрузка конфигурации из {cfg_path}")
     if not cfg_path.exists():
         print(f"CRITICAL ERROR: Файл конфигурации {cfg_path} не найден!")
@@ -45,8 +53,21 @@ def load_all_fonts_from_config(config: dict) -> tuple[
     return title_font, normal_font, bold_font, section_font
 
 
-def load_all_civ_names() -> list[str]:
-    data_dir = BASEDIR / "data"
+def _resolve_data_dir(config: dict, *, locale: str) -> Path:
+    input_cfg = config.get("input", {}) or {}
+    data_dir_raw = input_cfg.get("data_dir")
+    if data_dir_raw:
+        data_dir_str = str(data_dir_raw).format(locale=locale)
+        p = Path(data_dir_str)
+        return p if p.is_absolute() else (BASEDIR / p)
+
+    loc = (locale or "ru").strip().lower()
+    if not loc or loc == "ru":
+        return BASEDIR / "data"
+    return BASEDIR / "data" / loc
+
+
+def load_all_civ_names(data_dir: Path) -> list[str]:
     civ_names = []
     if not data_dir.exists():
         print(f"WARNING: Директория с данными цивилизаций '{data_dir}' не найдена.")
@@ -58,8 +79,8 @@ def load_all_civ_names() -> list[str]:
     return civ_names
 
 
-def load_civ_data(civ_name: str) -> dict:
-    civ_path = BASEDIR / "data" / f"{civ_name}.json"
+def load_civ_data(civ_name: str, *, data_dir: Path) -> dict:
+    civ_path = data_dir / f"{civ_name}.json"
     print(f"INFO: Загрузка данных для цивилизации '{civ_name}' из {civ_path}")
     if not civ_path.exists():
         print(f"ERROR: Файл данных для цивилизации '{civ_name}' не найден: {civ_path}")
@@ -180,12 +201,38 @@ def _apply_background_image_or_heraldry(base_canvas: Image.Image, bg_source_img:
             base_canvas.paste(scaled_bg_img, (0, 0))
 
 
+def save_final_image(final_image: Image.Image, civ_name: str, config: dict, *, locale: str) -> str | None:
+    output_cfg = config.get("output", {}) or {}
+    image_cfg = config.get("image", {}) or {}
+
+    output_format = str(output_cfg.get("format", "png")).lower()
+    output_rel_path = str(output_cfg.get("output_path", "stream_images/{locale}/{civ_name}.{format}")).format(
+        civ_name=civ_name, format=output_format, locale=locale
+    )
+    final_output_abs_path = BASEDIR / output_rel_path
+    final_output_abs_path.parent.mkdir(parents=True, exist_ok=True)
+
+    bg_color_tuple = ImageColor.getrgb(image_cfg.get("background_color", "#FFFFFF"))
+    try:
+        if output_format in ("jpg", "jpeg"):
+            rgb_image = Image.new("RGB", final_image.size, bg_color_tuple[:3])
+            rgb_image.paste(final_image, mask=final_image.split()[3] if final_image.mode == "RGBA" else None)
+            rgb_image.save(str(final_output_abs_path), quality=int(output_cfg.get("jpg_quality", 90)))
+        else:
+            final_image.save(str(final_output_abs_path))
+        print(f"INFO [{civ_name}]: Изображение сохранено: {final_output_abs_path}")
+        return str(final_output_abs_path)
+    except Exception as e:
+        print(f"ERROR [{civ_name}]: Сохранение '{final_output_abs_path}': {e}")
+        return None
+
+
 def draw_civilization(
-        civ_name: str, config: dict,
+        civ_name: str, config: dict, *, locale: str,
         fonts_tuple: tuple[ImageFont.FreeTypeFont, ImageFont.FreeTypeFont, ImageFont.FreeTypeFont, ImageFont.FreeTypeFont]
         ) -> str | None:
     title_font, normal_font, bold_font, section_font = fonts_tuple
-    civ_data = load_civ_data(civ_name)
+    civ_data = load_civ_data(civ_name, data_dir=_resolve_data_dir(config, locale=locale))
     if civ_data.get("error"):
         return None
 
@@ -193,11 +240,21 @@ def draw_civilization(
     layout_cfg, icons_cfg = config.get('layout', {}), config.get('icons', {})
     text_styles_cfg = config.get('text', {})
 
-    img_width, img_height_fixed = image_cfg.get('width', 400), image_cfg.get('height', 0)
-    padding, section_spacing = layout_cfg.get('padding', 15), layout_cfg.get('section_spacing', 10)
-    item_spacing, text_compactness = layout_cfg.get('item_spacing', 5), layout_cfg.get('text_compactness', 0.9)
-    icon_text_spacing = icons_cfg.get('icon_text_spacing', 8)
-    section_header_bottom_margin = layout_cfg.get('section_header_bottom_margin', 5)
+    renderer_mode = str(layout_cfg.get("renderer", "site")).lower()
+    if renderer_mode == "site" and _render_civ_image_site is not None:
+        config_for_render = dict(config)
+        config_for_render["locale"] = locale
+        final_image = _render_civ_image_site(civ_data, config_for_render, fonts_tuple)
+        return save_final_image(final_image, civ_name, config, locale=locale)
+
+    img_width = int(image_cfg.get('width', 400))
+    img_height_fixed = int(image_cfg.get('height', 0) or 0)
+    padding = int(layout_cfg.get('padding', 15))
+    section_spacing = int(layout_cfg.get('section_spacing', 10))
+    item_spacing = int(layout_cfg.get('item_spacing', 5))
+    text_compactness = float(layout_cfg.get('text_compactness', 0.9))
+    icon_text_spacing = int(icons_cfg.get('icon_text_spacing', 8))
+    section_header_bottom_margin = int(layout_cfg.get('section_header_bottom_margin', 5))
 
     content_canvas = Image.new("RGBA", (img_width, 3000), (0, 0, 0, 0))
     draw = ImageDraw.Draw(content_canvas)
@@ -254,11 +311,23 @@ def draw_civilization(
     bonus_icon_size = icons_cfg.get('bonus_icon_size', 20) if icons_cfg.get('show_bonus_icons', True) else 0
     team_bonus_icon_size = icons_cfg.get('team_bonus_icon_size', 20) if icons_cfg.get('show_team_bonus_icons', True) else 0
     
+    loc = (locale or "ru").strip().lower()
+    if loc == "en":
+        bonus_title = "Bonuses:"
+        unique_units_title = "Unique Units:"
+        unique_techs_title = "Unique Techs:"
+        team_bonus_title = "Team Bonus:"
+    else:
+        bonus_title = "Бонусы:"
+        unique_units_title = "Уникальные юниты:"
+        unique_techs_title = "Уникальные технологии:"
+        team_bonus_title = "Командный бонус:"
+
     sections_data_spec = [
-        ("Бонусы:", 'bonuses', bonus_icon_size, text_styles_cfg.get('bonus', {})),
-        ("Уникальные юниты:", 'unique_units', icons_cfg.get('unit_icon_size', 28), text_styles_cfg.get('bonus', {})),
-        ("Уникальные технологии:", 'unique_techs', icons_cfg.get('tech_icon_size', 28), text_styles_cfg.get('bonus', {})),
-        ("Командный бонус:", 'team_bonus', team_bonus_icon_size, text_styles_cfg.get('team_bonus', {}))
+        (bonus_title, 'bonuses', bonus_icon_size, text_styles_cfg.get('bonus', {})),
+        (unique_units_title, 'unique_units', icons_cfg.get('unit_icon_size', 28), text_styles_cfg.get('bonus', {})),
+        (unique_techs_title, 'unique_techs', icons_cfg.get('tech_icon_size', 28), text_styles_cfg.get('bonus', {})),
+        (team_bonus_title, 'team_bonus', team_bonus_icon_size, text_styles_cfg.get('team_bonus', {})),
         ]
     section_title_style = text_styles_cfg.get('section_title', {})
     section_title_color = ImageColor.getrgb(section_title_style.get('color', "#000000"))
@@ -282,26 +351,36 @@ def draw_civilization(
         item_text_col_val = ImageColor.getrgb(item_style.get('color', "#000000"))
 
         for item_data_dict in items_list:
-            is_bonus_section = (sec_title_text == "Бонусы:")
+            is_bonus_section = (data_key == "bonuses")
 
             item_name_raw = item_data_dict.get('name', item_data_dict.get('text', ''))
             item_name_clean = clean_text_for_display(item_name_raw)
             if is_bonus_section and item_name_clean:
                 item_name_clean = f"• {item_name_clean}"
 
-            item_desc_for_display_cleaned = clean_text_for_display(item_data_dict.get('description', ''))
             item_desc_content_final = ""
-            if sec_title_text == "Уникальные технологии:" and item_desc_for_display_cleaned:
-                item_desc_content_final = f"({item_desc_for_display_cleaned})"
-            elif sec_title_text == "Уникальные юниты:" and item_desc_for_display_cleaned:
-                item_desc_content_final = f"({item_desc_for_display_cleaned})"
-            elif item_desc_for_display_cleaned:
-                item_desc_content_final = item_desc_for_display_cleaned
+            if data_key == "unique_techs":
+                item_desc_for_display_cleaned = clean_text_for_display(item_data_dict.get('description', ''))
+                if item_desc_for_display_cleaned:
+                    item_desc_content_final = f"({item_desc_for_display_cleaned})"
+            elif data_key == "unique_units":
+                unit_type_clean = clean_text_for_display(item_data_dict.get('type', ''))
+                ability_clean = clean_text_for_display(item_data_dict.get('description', ''))
+                if unit_type_clean and ability_clean:
+                    item_desc_content_final = f"({unit_type_clean})\n{ability_clean}"
+                elif unit_type_clean:
+                    item_desc_content_final = f"({unit_type_clean})"
+                elif ability_clean:
+                    item_desc_content_final = ability_clean
+            else:
+                item_desc_for_display_cleaned = clean_text_for_display(item_data_dict.get('description', ''))
+                if item_desc_for_display_cleaned:
+                    item_desc_content_final = item_desc_for_display_cleaned
 
             item_icon_path = item_data_dict.get('icon')
             item_start_y = current_y
 
-            item_font_to_use = bold_font if (sec_title_text in ["Уникальные технологии:", "Уникальные юниты:"] and item_name_clean) else normal_font
+            item_font_to_use = bold_font if (data_key in ("unique_techs", "unique_units") and item_name_clean) else normal_font
 
             # --- Отрисовка элемента ---
             text_x_coord = current_x
@@ -333,8 +412,8 @@ def draw_civilization(
                 y_for_item_desc = y_after_name + int(3 * text_compactness) if item_name_clean and name_block_h > 0 else item_start_y
 
                 # Описание для УТ и УЮ рисуется под именем, со сдвигом если есть иконка
-                desc_x_for_ut = text_x_coord if sec_title_text in ["Уникальные технологии:", "Уникальные юниты:"] else current_x
-                max_desc_render_width = max_text_render_width if sec_title_text in ["Уникальные технологии:", "Уникальные юниты:"] else (img_width - 2 * padding)
+                desc_x_for_ut = text_x_coord if data_key in ("unique_techs", "unique_units") else current_x
+                max_desc_render_width = max_text_render_width if data_key in ("unique_techs", "unique_units") else (img_width - 2 * padding)
 
                 if not (img_height_fixed > 0 and y_for_item_desc + desc_line_h_val_item > img_height_fixed - padding):
                     y_after_desc, desc_block_h, _ = draw_wrapped_text_and_get_actual_width(
@@ -394,11 +473,12 @@ def draw_civilization(
 
     final_content_height = max_content_y
     if img_height_fixed > 0:
-        final_img_height = img_height_fixed
+        final_img_height = int(img_height_fixed)
         content_canvas_cropped = content_canvas.crop((0, 0, img_width, final_img_height))
     else:
         final_img_height = final_content_height - (item_spacing * text_compactness if final_content_height > padding else 0) + padding
         final_img_height = max(final_img_height, padding * 2 + 50)
+        final_img_height = int(round(final_img_height))
         content_canvas_cropped = content_canvas.crop((0, 0, img_width, final_img_height))
 
     bg_color_tuple = ImageColor.getrgb(image_cfg.get('background_color', "#FFFFFF"))
@@ -432,7 +512,9 @@ def draw_civilization(
             border_draw.rectangle([(0, 0), (img_width-1, final_img_height-1)], outline=border_col, width=border_w)
 
     output_format = output_cfg.get('format', 'png').lower()
-    output_rel_path = output_cfg.get('output_path', 'ru/{civ_name}/{civ_name}.{format}').format(civ_name=civ_name, format=output_format)
+    output_rel_path = str(output_cfg.get("output_path", "stream_images/{locale}/{civ_name}.{format}")).format(
+        civ_name=civ_name, format=output_format, locale=locale
+    )
     final_output_abs_path = BASEDIR / output_rel_path
     final_output_abs_path.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -449,9 +531,10 @@ def draw_civilization(
         return None
 
 
-def generate_all_images():
+def generate_all_images(*, config_path: str | Path | None = None, locale: str = "ru") -> None:
     print("--- Начало генерации всех изображений ---")
-    config = load_config_file()
+    config = load_config_file(config_path)
+    config["locale"] = (locale or "ru").strip().lower()
     try:
         fonts_tuple = load_all_fonts_from_config(config)
     except Exception as e:
@@ -459,7 +542,8 @@ def generate_all_images():
         return
 
     generated_count, failed_count = 0, 0
-    civ_names_list = load_all_civ_names()
+    data_dir = _resolve_data_dir(config, locale=locale)
+    civ_names_list = sorted(load_all_civ_names(data_dir))
     if not civ_names_list:
         print("WARNING: Список цивилизаций пуст.")
         return
@@ -468,7 +552,7 @@ def generate_all_images():
     for civ_name_key in civ_names_list:
         print(f"\n--- Обработка цивилизации: {civ_name_key} ---")
         try:
-            if draw_civilization(civ_name_key, config, fonts_tuple):
+            if draw_civilization(civ_name_key, config, locale=locale, fonts_tuple=fonts_tuple):
                 generated_count += 1
             else:
                 failed_count += 1
@@ -484,5 +568,9 @@ def generate_all_images():
         print(f"Не удалось сгенерировать: {failed_count} изображений.")
 
 
+def main(*, config_path: str | Path | None = None, locale: str = "ru") -> None:
+    generate_all_images(config_path=config_path, locale=locale)
+
+
 if __name__ == "__main__":
-    generate_all_images()
+    main()

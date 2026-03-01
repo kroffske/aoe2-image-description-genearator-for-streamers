@@ -2,6 +2,8 @@
 from pathlib import Path
 from PIL import ImageFont
 
+from aoe2civgen.paths import find_repo_root
+
 # --- Комментарий о шрифтах ---
 # Вы можете найти и скачать шрифты с различных ресурсов, например:
 # - Google Fonts: https://fonts.google.com/
@@ -17,7 +19,7 @@ from PIL import ImageFont
 
 # Базовая директория проекта (где находится этот файл fonts.py)
 # Это используется для разрешения относительных путей из config.yaml
-BASEDIR_FONTS_PY = Path(__file__).resolve().parent
+BASEDIR_FONTS_PY = find_repo_root()
 
 
 def load_font_from_config(
