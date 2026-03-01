@@ -15,7 +15,8 @@ logs/
 # Generated artifacts (keep out of git)
 data/
 ru/
-stream_images/
+
+# NOTE: `stream_images/` is intentionally tracked (explicitly requested).
 
 # Local-only assets
 fonts/
