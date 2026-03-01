@@ -7,7 +7,7 @@
     </style>
   </defs>
 
-  <!-- Semi-transparent background (50% opacity) over checker hint -->
+  <!-- Semi-transparent background (30% opacity) over checker hint -->
   <rect x="0" y="0" width="400" height="720" fill="white"/>
   <g opacity="0.15">
     <rect x="0" y="0" width="40" height="40" fill="#000"/>
@@ -21,7 +21,7 @@
     <rect x="320" y="0" width="40" height="40" fill="#000"/>
     <rect x="360" y="40" width="40" height="40" fill="#000"/>
   </g>
-  <rect x="0" y="0" width="400" height="720" fill="#F5DEB3" fill-opacity="0.5"/>
+  <rect x="0" y="0" width="400" height="720" fill="#F5DEB3" fill-opacity="0.3"/>
 
   <!-- Title + flag -->
   <text x="200" y="34" text-anchor="middle" class="title">Ацтеки</text>
@@ -30,7 +30,7 @@
 
   <!-- Blocks -->
   <g>
-    <rect x="15" y="70" width="370" height="180" rx="10" fill="#E8D8B0" fill-opacity="0.55" stroke="#8B4513" stroke-width="1"/>
+    <rect x="15" y="70" width="370" height="180" rx="10" fill="#E8D8B0" fill-opacity="0.3" stroke="#8B4513" stroke-width="1"/>
     <text x="27" y="92" class="text">Описание (сверху): «Цивилизация …»</text>
     <text x="27" y="114" class="text">• бонус 1</text>
     <text x="27" y="136" class="text">• бонус 2</text>
@@ -38,14 +38,14 @@
   </g>
 
   <g>
-    <rect x="15" y="265" width="370" height="110" rx="10" fill="#E8D8B0" fill-opacity="0.55" stroke="#8B4513" stroke-width="1"/>
+    <rect x="15" y="265" width="370" height="110" rx="10" fill="#E8D8B0" fill-opacity="0.3" stroke="#8B4513" stroke-width="1"/>
     <text x="27" y="287" class="label">Уникальный юнит:</text>
     <rect x="27" y="302" width="26" height="26" fill="#c2a86b" stroke="#8B4513" stroke-width="1"/>
     <text x="61" y="320" class="text">Воин-ягуар (пехота).</text>
   </g>
 
   <g>
-    <rect x="15" y="390" width="370" height="140" rx="10" fill="#E8D8B0" fill-opacity="0.55" stroke="#8B4513" stroke-width="1"/>
+    <rect x="15" y="390" width="370" height="140" rx="10" fill="#E8D8B0" fill-opacity="0.3" stroke="#8B4513" stroke-width="1"/>
     <text x="27" y="412" class="label">Уникальные технологии:</text>
     <rect x="27" y="424" width="26" height="26" fill="#c2a86b" stroke="#8B4513" stroke-width="1"/>
     <text x="61" y="442" class="text">• Атлатль (+1 …)</text>
@@ -54,10 +54,10 @@
   </g>
 
   <g>
-    <rect x="15" y="545" width="370" height="110" rx="10" fill="#E8D8B0" fill-opacity="0.55" stroke="#8B4513" stroke-width="1"/>
+    <rect x="15" y="545" width="370" height="110" rx="10" fill="#E8D8B0" fill-opacity="0.3" stroke="#8B4513" stroke-width="1"/>
     <text x="27" y="567" class="label">Командный бонус:</text>
     <text x="27" y="591" class="text">• Реликвии приносят …</text>
   </g>
 
-  <text x="15" y="705" class="text">Шаблон: блоки + выравнивание (фон: 50% прозрачности)</text>
+  <text x="15" y="705" class="text">Шаблон: блоки + выравнивание (фон: 30% прозрачности)</text>
 </svg>

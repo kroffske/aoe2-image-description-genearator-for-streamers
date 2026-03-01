@@ -8,7 +8,7 @@ image:
   width: 400
   height: 0
   background_color: "#F5DEB3"
-  background_opacity: 0.5
+  background_opacity: 0.3
   background_image: ""
   use_heraldry_background: false
   heraldry_opacity: 0.2
@@ -73,3 +73,6 @@ output:
   format: "png"
   jpg_quality: 90
   output_path: "stream_images/{locale}/{civ_name}.{format}"
+
+blocks:
+  fill_opacity: 0.3
