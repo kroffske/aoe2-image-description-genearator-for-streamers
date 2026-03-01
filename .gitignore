@@ -18,6 +18,8 @@ ru/
 icons/
 
 # NOTE: `stream_images/` is intentionally tracked (explicitly requested).
+!stream_images/ru/
+!stream_images/ru/**
 
 # Local-only assets
 fonts/
