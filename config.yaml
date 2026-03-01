@@ -1,0 +1,75 @@
+font_paths:
+  title: null
+  section_title: null
+  normal: null
+  bold: null
+
+image:
+  width: 400
+  height: 0
+  background_color: "#F5DEB3"
+  background_opacity: 0.5
+  background_image: ""
+  use_heraldry_background: false
+  heraldry_opacity: 0.2
+  border:
+    enabled: true
+    width: 2
+    color: "#8B4513"
+    radius: 10
+
+text:
+  title:
+    font_size: 28
+    font_weight: "bold"
+    color: "#8B4513"
+    align: "center"
+  description:
+    font_size: 12
+    color: "#000000"
+    line_height: 1.2
+  bonus:
+    font_size: 12
+    color: "#000000"
+    line_height: 1.2
+  section_title:
+    font_size: 14
+    font_weight: "bold"
+    color: "#8B4513"
+  team_bonus:
+    font_size: 12
+    font_weight: "bold"
+    color: "#000000"
+
+icons:
+  show_bonus_icons: true
+  show_team_bonus_icons: true
+  bonus_icon_size: 20
+  team_bonus_icon_size: 20
+  civ_icon_size: 64
+  unique_unit_icon_size: 34
+  unique_unit_icon_gap: 8
+  unique_tech_icon_size: 26
+  unique_tech_icon_gap: 8
+  unit_icon_size: 28
+  tech_icon_size: 28
+  icon_text_spacing: 8
+  opacity: 1.0
+
+layout:
+  padding: 15
+  section_spacing: 10
+  item_spacing: 5
+  section_header_bottom_margin: 5
+  civ_icon_position: "top-right"
+  text_compactness: 0.9
+  renderer: "site"
+  title_offset_y: -6
+  civ_icon_padding: 15
+  bullet_extra_spacing_px: 4
+  uu_description_gap_px: 2
+
+output:
+  format: "png"
+  jpg_quality: 90
+  output_path: "stream_images/{locale}/{civ_name}.{format}"
