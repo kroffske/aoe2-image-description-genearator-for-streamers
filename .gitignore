@@ -15,6 +15,7 @@ logs/
 # Generated artifacts (keep out of git)
 data/
 ru/
+icons/
 
 # NOTE: `stream_images/` is intentionally tracked (explicitly requested).
 
@@ -24,4 +25,4 @@ aoe2_civ_image_generator.py
 .idea/
 .claude
 
-# NOTE: `config.yaml` and `icons/` are intentionally tracked (explicitly requested).
+# NOTE: `config.yaml` is intentionally tracked (explicitly requested).
