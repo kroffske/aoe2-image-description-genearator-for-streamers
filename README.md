@@ -10,6 +10,7 @@
 * Настраиваемый внешний вид через `config.yaml` (размеры, цвета, шрифты, отступы, пути вывода).
 * Актуальные данные и иконки из `aoe2techtree`.
 * Поддержка локалей `ru` и `en` (через `--locale`).
+* Встроенный HTTP-сервер (FastAPI) для раздачи сгенерированных PNG из `stream_images/`.
 * Команды и параметры CLI: `docs/commands/README.md`.
 
 ## Требования
@@ -100,6 +101,41 @@
 
 * Технический документ: `docs/TECHNICAL_SOLUTION.md`.
 * Команды CLI + новые параметры верстки: `docs/commands/README.md`.
+
+---
+
+## HTTP-сервер (FastAPI)
+
+Сервер раздаёт уже сгенерированные PNG из `stream_images/<locale>/` (поддерживаются только локали `ru` и `en`).
+
+Запуск:
+
+```bash
+uv run aoe2civgen serve --host 127.0.0.1 --port 8000
+# или
+make serve
+```
+
+Эндпоинты:
+
+* `GET /healthz` → `ok`
+* `GET /images/{locale}/{filename}` → PNG (только `.png`)
+
+Примеры:
+
+* EN: `http://127.0.0.1:8000/images/en/Aztecs.png`
+* RU (URL-encoded): `http://127.0.0.1:8000/images/ru/%D0%9C%D0%B0%D0%B9%D1%8F.png`
+
+---
+
+## GitHub Pages (опционально)
+
+Если вы хотите хостить PNG на GitHub Pages (Actions-based), включите Pages в репозитории: **Settings → Pages → Source: GitHub Actions**.
+
+После деплоя файлы будут доступны по путям (базовый URL: `https://<owner>.github.io/<repo>`):
+
+* `/images/en/<filename>.png` (например: `/images/en/Aztecs.png`)
+* `/images/ru/<url-encoded-filename>.png` (например: `/images/ru/%D0%9C%D0%B0%D0%B9%D1%8F.png`)
 
 ---
 

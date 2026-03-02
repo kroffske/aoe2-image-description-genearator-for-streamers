@@ -19,3 +19,9 @@ generate: check_config extract
 
 generate_en: check_config extract_en
 	$(UV) run aoe2civgen generate --locale en
+
+HOST ?= 127.0.0.1
+PORT ?= 8000
+
+serve: install_deps
+	$(UV) run aoe2civgen serve --host $(HOST) --port $(PORT)

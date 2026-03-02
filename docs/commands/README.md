@@ -32,6 +32,28 @@ uv run aoe2civgen generate --locale en
 - один конфиг на все языки: `stream_images/{locale}/{civ_name}.{format}`
 - или отдельный конфиг: `uv run aoe2civgen generate --locale en --config config.en.yaml`
 
+## HTTP-сервер (FastAPI): раздача PNG
+
+Сервер раздаёт файлы из `stream_images/<locale>/` (локали: `ru`, `en`, только `.png`).
+
+Запуск:
+
+```bash
+uv run aoe2civgen serve --host 127.0.0.1 --port 8000
+# или
+make serve
+```
+
+Эндпоинты:
+
+- `GET /healthz` → `ok`
+- `GET /images/{locale}/{filename}` → PNG
+
+Примеры:
+
+- EN: `http://127.0.0.1:8000/images/en/Aztecs.png`
+- RU (URL-encoded): `http://127.0.0.1:8000/images/ru/%D0%9C%D0%B0%D0%B9%D1%8F.png`
+
 ## Новые “spacing knobs” в `config.yaml`
 
 Ключи, влияющие на отступы/интерлиньяж/плотность:

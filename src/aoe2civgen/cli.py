@@ -37,6 +37,10 @@ def _build_parser() -> argparse.ArgumentParser:
     all_p.add_argument("--locale", default="ru", help="Locale code (e.g. ru, en).")
     all_p.add_argument("--config", default=None, help="Path to YAML config (default: config.yaml).")
 
+    serve_p = sub.add_parser("serve", help="Serve generated images from stream_images/ via HTTP.")
+    serve_p.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1).")
+    serve_p.add_argument("--port", default=8000, type=int, help="Bind port (default: 8000).")
+
     return p
 
 
@@ -62,6 +66,11 @@ def run(argv: list[str] | None = None) -> int:
 
         extract_main(locale=args.locale)
         generate_main(config_path=args.config, locale=args.locale)
+        return 0
+    if args.command == "serve":
+        from aoe2civgen.server import serve
+
+        serve(host=args.host, port=args.port)
         return 0
 
     raise SystemExit(f"Unknown command: {args.command}")
