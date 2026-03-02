@@ -48,11 +48,21 @@ make serve
 
 - `GET /healthz` → `ok`
 - `GET /images/{locale}/{filename}` → PNG
+- `GET /image/{locale}?name=<civ>` → PNG по имени файла (можно с `.png` или без)
+
+Примечание про RU-имена в URL:
+- В path-части URL не-ASCII символы должны быть percent-encoded (некоторые клиенты, например `curl`, иначе получают 400 от HTTP-парсера).
+- Браузеры обычно кодируют автоматически.
 
 Примеры:
 
 - EN: `http://127.0.0.1:8000/images/en/Aztecs.png`
 - RU (URL-encoded): `http://127.0.0.1:8000/images/ru/%D0%9C%D0%B0%D0%B9%D1%8F.png`
+- RU через query-параметр (удобно для `curl`):
+
+  ```bash
+  curl -I --get --data-urlencode 'name=Ацтеки.png' http://127.0.0.1:8000/image/ru
+  ```
 
 ## Новые “spacing knobs” в `config.yaml`
 

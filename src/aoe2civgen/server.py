@@ -2,10 +2,21 @@ from __future__ import annotations
 
 from pathlib import Path, PurePosixPath
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, PlainTextResponse
 
 from aoe2civgen.paths import find_repo_root
+
+
+def _normalize_png_filename(name: str) -> str:
+    if name.lower().endswith(".png"):
+        return name
+
+    url_path = PurePosixPath(name)
+    if url_path.suffix:
+        raise HTTPException(status_code=404, detail="Only .png images are supported.")
+
+    return f"{name}.png"
 
 
 def _safe_png_path(*, images_root: Path, locale: str, filename: str) -> Path:
@@ -47,6 +58,12 @@ def create_app(*, images_root: Path | None = None) -> FastAPI:
 
     @app.api_route("/images/{locale}/{filename:path}", methods=["GET", "HEAD"])
     def get_image(locale: str, filename: str) -> FileResponse:
+        path = _safe_png_path(images_root=resolved_images_root, locale=locale, filename=filename)
+        return FileResponse(path, media_type="image/png")
+
+    @app.api_route("/image/{locale}", methods=["GET", "HEAD"])
+    def get_image_by_name(locale: str, name: str = Query(..., min_length=1)) -> FileResponse:
+        filename = _normalize_png_filename(name)
         path = _safe_png_path(images_root=resolved_images_root, locale=locale, filename=filename)
         return FileResponse(path, media_type="image/png")
 
