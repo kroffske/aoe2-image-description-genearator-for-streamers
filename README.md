@@ -142,6 +142,8 @@ make serve
 
 Если вы хотите хостить PNG на GitHub Pages (Actions-based), включите Pages в репозитории: **Settings → Pages → Source: GitHub Actions**.
 
+Workflow публикует **уже сгенерированные** файлы из `stream_images/` как статичный сайт.
+
 После деплоя файлы будут доступны по путям (базовый URL: `https://<owner>.github.io/<repo>`):
 
 * `/images/en/<filename>.png` (например: `/images/en/Aztecs.png`)
